@@ -40,7 +40,7 @@ Bounce volumeDown = Bounce();
 Bounce channelUp = Bounce(); 
 Bounce channelDown = Bounce();
 
-int bounceInterval = 15;
+int bounceInterval = 5;
 
 #include "SI4707.h"
 #include "Wire.h"
