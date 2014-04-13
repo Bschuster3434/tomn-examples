@@ -27,6 +27,20 @@
 Adafruit_PCD8544 display = Adafruit_PCD8544(9, 8, 7, 6, 5);
 int displayBacklightPin = 3;
 
+#include <Bounce2.h>
+
+// Channel and volume buttons
+int volumeUpButton = 10;
+int volumeDownButton = 11;
+int channelUpButton = 12;
+int channelDownButton = 13;
+
+Bounce volumeUp = Bounce(); 
+Bounce volumeDown = Bounce(); 
+Bounce channelUp = Bounce(); 
+Bounce channelDown = Bounce();
+
+int bounceInterval = 15;
 
 #include "SI4707.h"
 #include "Wire.h"
@@ -51,6 +65,30 @@ void setup()
   display.display();
   analogWrite(displayBacklightPin, 255);
   
+  pinMode(volumeUpButton, INPUT);
+  digitalWrite(volumeUpButton,HIGH);
+  pinMode(volumeDownButton, INPUT);
+  digitalWrite(volumeDownButton,HIGH);
+  pinMode(channelUpButton, INPUT);
+  digitalWrite(channelUpButton,HIGH);
+  pinMode(channelDownButton, INPUT);
+  digitalWrite(channelDownButton,HIGH);
+
+  volumeUp.attach(volumeUpButton);
+  volumeUp.interval(bounceInterval);
+  
+  volumeDown.attach(volumeDownButton);
+  volumeDown.interval(bounceInterval);
+
+  channelUp.attach(channelUpButton);
+  channelUp.interval(bounceInterval);
+
+  channelDown.attach(channelDownButton);
+  channelDown.interval(bounceInterval);
+
+
+
+
   Serial.println(F("Starting up the Si4707......."));
   Serial.println();
   delay(1000);
@@ -94,9 +132,13 @@ void loop() // run over and over
     getStatus();
        
   if (Serial.available() > 0)
+  {
+    function = Serial.read();
     getFunction();
+  }
     
   updateDisplay();
+  processButtons();
   
 }
 //
@@ -214,9 +256,8 @@ void getStatus()
 //
 //  Functions are performed here.
 //
-void getFunction()
+void getFunction( )
 {
-  function = Serial.read();
     
   switch (function)
     {
@@ -355,4 +396,44 @@ void updateDisplay()
   display.display();
 }
 
+void processButtons()
+{
+  
+  boolean volumeUpStateChanged = volumeUp.update();
+  int volumeUpState = volumeUp.read();
+  
+  // Detect the falling edge
+   if ( volumeUpStateChanged && volumeUpState == LOW ) {     
+       function = '+';
+       getFunction();
+   }
+
+  boolean volumeDownStateChanged = volumeDown.update();
+  int volumeDownState = volumeDown.read();
+  
+  // Detect the falling edge
+   if ( volumeDownStateChanged && volumeDownState == LOW ) {     
+       function = '-';
+       getFunction();
+   }
+  
+  boolean channelUpStateChanged = channelUp.update();
+  int channelUpState = channelUp.read();
+  
+  // Detect the falling edge
+   if ( channelUpStateChanged && channelUpState == LOW ) {     
+       function = 'u';
+       getFunction();
+   }
+
+  boolean channelDownStateChanged = channelDown.update();
+  int channelDownState = channelDown.read();
+  
+  // Detect the falling edge
+   if ( channelDownStateChanged && channelDownState == LOW ) {     
+       function = 'd';
+       getFunction();
+   }
+   
+}
 
