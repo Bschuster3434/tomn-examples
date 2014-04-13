@@ -10,6 +10,24 @@
   You must enable the interrupts that you want in setup().
   
 */
+
+// 
+// Including the support for the Nokia 5110 displays
+//
+
+#include <Adafruit_GFX.h>
+#include <Adafruit_PCD8544.h>
+
+// pin 10 - Backlight (EL)
+// pin 9 - Serial clock out (SCLK)
+// pin 8 - Serial data out (DIN)
+// pin 7 - Data/Command select (D/C)
+// pin 6 - LCD chip select (CS)
+// pin 5 - LCD reset (RST)
+Adafruit_PCD8544 display = Adafruit_PCD8544(9, 8, 7, 6, 5);
+int displayBacklightPin = 3;
+
+
 #include "SI4707.h"
 #include "Wire.h"
 //
@@ -22,8 +40,17 @@ byte function = 0x00;           //  Function to be performed.
 void setup()
 {
   delay(100);
-  Serial.begin(115200);
+  Serial.begin(9600);
   delay(100);
+  
+  display.begin();
+  display.setContrast(25);
+  display.clearDisplay();
+  display.println("Starting");
+  display.println("Si4707");
+  display.display();
+  analogWrite(displayBacklightPin, 255);
+  
   Serial.println(F("Starting up the Si4707......."));
   Serial.println();
   delay(1000);
@@ -68,6 +95,9 @@ void loop() // run over and over
        
   if (Serial.available() > 0)
     getFunction();
+    
+  updateDisplay();
+  
 }
 //
 //  Status bits are processed here.
@@ -297,8 +327,32 @@ void printHex(byte value)
   Serial.print("  ");
 }
 //
-//  The End.
+//  The End??
 //
 
+void updateDisplay()
+{
+ 
+  display.clearDisplay();
+ 
+  display.setCursor(0,1*8);
+  display.setTextColor(BLACK, WHITE);
+  display.setTextSize(1);
+  display.print(F("RSSI: "));
+  display.println(rssi);
+  display.print(F("SNR: "));
+  display.println(snr);
+  display.print(F("Volume: "));
+  display.println(volume);
+ 
+ 
+  // Display the tuned frequency
+  display.setCursor(0,4*8);
+  display.setTextColor(BLACK, WHITE);
+  display.setTextSize(2);
+  display.print(frequency, 3);
+ 
+  display.display();
+}
 
 
