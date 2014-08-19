@@ -28,7 +28,7 @@ EthernetUDP udp;
 char server[] = "pool.ntp.org";
 
 // HACK!
-IPAddress timeServer(132, 163, 4, 101); // time-a.timefreq.bldrdoc.gov NTP server
+IPAddress timeServer(209,43,20,114); // time-a.timefreq.bldrdoc.gov NTP server
 
 unsigned int localPort = 8888;      // local port to listen for UDP packets
 const int NTP_PACKET_SIZE= 48; // NTP time stamp is in the first 48 bytes of the message
@@ -66,7 +66,9 @@ void setup() {
   }
   // print the Ethernet board/shield's IP address:
   tft.print("My IP address: ");
+  tft.setTextColor(ILI9340_GREEN, ILI9340_BLACK);
   tft.println(Ethernet.localIP());
+  tft.setTextColor(ILI9340_WHITE, ILI9340_BLACK);
   
   udp.begin(localPort);
 
@@ -105,7 +107,9 @@ void loop() {
     unsigned long epoch = secsSince1900 - seventyYears - ( 4*3600);  // GMT - 4!
     RTC.adjust(DateTime(epoch));
     tft.setCursor(8*6, 25*8);
+    tft.setTextColor(ILI9340_RED, ILI9340_BLACK);
     tft.print(" - Adjusted");
+    tft.setTextColor(ILI9340_WHITE, ILI9340_BLACK);
 
   }
   
