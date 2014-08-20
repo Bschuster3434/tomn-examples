@@ -34,8 +34,9 @@ unsigned int localPort = 8888;      // local port to listen for UDP packets
 const int NTP_PACKET_SIZE= 48; // NTP time stamp is in the first 48 bytes of the message
 byte packetBuffer[ NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets 
 unsigned long secsSince1900;
-
-
+unsigned long secsLastSet;
+unsigned long secsDelay = 600;
+int counter;
 
 void setup() {
   Serial.begin(9600);
@@ -49,7 +50,7 @@ void setup() {
   tft.setCursor(0, 0);
   tft.setTextColor(ILI9340_WHITE, ILI9340_BLACK);
   tft.setTextSize(2);
-  tft.println("      NTP Clock");
+  tft.println("        NTP Clock");
   tft.setTextSize(1);
 
   Wire.begin();
@@ -65,6 +66,7 @@ void setup() {
     for(;;);
   }
   // print the Ethernet board/shield's IP address:
+  tft.setCursor(0,26*8);
   tft.print("My IP address: ");
   tft.setTextColor(ILI9340_GREEN, ILI9340_BLACK);
   tft.println(Ethernet.localIP());
@@ -76,113 +78,89 @@ void setup() {
 
 
 void loop() {
+    // Unix time starts on Jan 1 1970. In seconds, that's 2208988800:
+    const unsigned long seventyYears = 2208988800UL;     
 
   //Every 10 minutes, send a new request to the NTP server
-  if ( !(secsSince1900 % 600) || secsSince1900 == 0 ) {
+  if ( (secsSince1900-secsLastSet > secsDelay) || secsLastSet == 0 ) {
     tft.setCursor(0,25*8);
-    tft.print("Sending             ");
+    tft.setTextSize(1);
+    tft.print("Sending               ");
     sendNTPpacket(timeServer); // send an NTP packet to a time server
   }
 
   if (  udp.parsePacket() ) {
-    tft.setCursor(0,25*8);
-    tft.print("Received");
-    // We've received a packet, read the data from it
-    udp.read(packetBuffer,NTP_PACKET_SIZE);  // read the packet into the buffer
+   tft.setCursor(0,25*8);
+   tft.setTextSize(1);
+   tft.print("Received");
+   // We've received a packet, read the data from it
+   udp.read(packetBuffer,NTP_PACKET_SIZE);  // read the packet into the buffer
 
-    //the timestamp starts at byte 40 of the received packet and is four bytes,
-    // or two words, long. First, esxtract the two words:
+   //the timestamp starts at byte 40 of the received packet and is four bytes,
+   // or two words, long. First, esxtract the two words:
 
-    unsigned long highWord = word(packetBuffer[40], packetBuffer[41]);
-    unsigned long lowWord = word(packetBuffer[42], packetBuffer[43]);  
-    // combine the four bytes (two words) into a long integer
-    // this is NTP time (seconds since Jan 1 1900):
-    secsSince1900 = highWord << 16 | lowWord;  
-    tft.setCursor(0,12*8);
-    tft.print("Seconds since Jan 1 1900 = " );
-    tft.println(secsSince1900);               
+   unsigned long highWord = word(packetBuffer[40], packetBuffer[41]);
+   unsigned long lowWord = word(packetBuffer[42], packetBuffer[43]);  
+   // combine the four bytes (two words) into a long integer
+   // this is NTP time (seconds since Jan 1 1900):
+   unsigned long secsNTP = highWord << 16 | lowWord;
+   // Save off the last time we actually set the time.    
+   secsLastSet = secsNTP - seventyYears;
    
-    // Every valid NTP packet - set the RTC!
-    const unsigned long seventyYears = 2208988800UL;     
-    unsigned long epoch = secsSince1900 - seventyYears - ( 4*3600);  // GMT - 4!
-    RTC.adjust(DateTime(epoch));
-    tft.setCursor(8*6, 25*8);
-    tft.setTextColor(ILI9340_RED, ILI9340_BLACK);
-    tft.print(" - Adjusted");
-    tft.setTextColor(ILI9340_WHITE, ILI9340_BLACK);
+   counter++;
+   
+   // Every valid NTP packet - set the RTC!
+   RTC.adjust(DateTime(secsNTP - seventyYears));
+   tft.setCursor(8*6, 25*8);
+   tft.setTextSize(1);
+   tft.print(" - ");
+   tft.setTextColor(ILI9340_RED, ILI9340_BLACK);
+   tft.print("Adjusted ");
+   tft.print( counter );
+   tft.setTextColor(ILI9340_WHITE, ILI9340_BLACK);
 
   }
   
-  
-  
-    // Unix time starts on Jan 1 1970. In seconds, that's 2208988800:
-    const unsigned long seventyYears = 2208988800UL;     
-    // subtract seventy years:
-    unsigned long epoch = secsSince1900 - seventyYears - ( 4*3600);  // GMT - 4!
-
-  tft.setCursor(0,5*8);
-  tft.setTextSize(1);
-  tft.println("Time: ");
-  tft.setTextSize(6);
-
-
-    tft.print((epoch  % 86400L) / 3600); // print the hour (86400 equals secs per day)
-    tft.print(':');  
-    if ( ((epoch % 3600) / 60) < 10 ) {
-      // In the first 10 minutes of each hour, we'll want a leading '0'
-      tft.print('0');
-    }
-    tft.print((epoch  % 3600) / 60); // print the minute (3600 equals secs per minute)
-    tft.print(':'); 
-    if ( (epoch % 60) < 10 ) {
-      // In the first 10 seconds of each minute, we'll want a leading '0'
-      tft.print('0');
-    }
-    tft.println(epoch %60); // print the second
-
-  
-
-  
-  
-  tft.setTextSize(1);
-
   DateTime now = RTC.now();
+  displayTime( now );
+  secsSince1900 = now.secondstime() + 946684800;  
 
-  tft.setCursor(0,20*8);
-  tft.setTextSize(2);
-  
-  tft.print(now.year(), DEC);
-  tft.print('/');
-  tft.print(now.month(), DEC);
-  tft.print('/');
-  tft.print(now.day(), DEC);
-  tft.print(' ');
-  tft.print(now.hour(), DEC);
-  tft.print(':');
-  tft.print(now.minute(), DEC);
-  tft.print(':');
-  tft.print(now.second(), DEC);
-  tft.println();
- 
-  tft.setTextSize(1);
-  tft.print(" since 1970 = ");
-  tft.print(now.unixtime());
-  tft.print("s = ");
-  tft.print(now.unixtime() / 86400L);
-  tft.println("d");
-
-  
-  
-  
-  
-  
-  delay(1000);
-  secsSince1900++;  
+  delay(100);
   
 }
+  
+ 
+void displayTime(DateTime rightNow) {
+  
+  tft.setTextSize(1);
 
+  tft.setCursor(0,6*8);
+  tft.setTextSize(5);
+  
+  tft.print(rightNow.year(), DEC);
+  tft.print('/');
+  if ( rightNow.month() < 10 ) tft.print("0");
+  tft.print(rightNow.month(), DEC);
+  tft.print('/');
+  if ( rightNow.day() < 10 ) tft.print("0");
+  tft.print(rightNow.day(), DEC);
+  tft.print(' ');
 
+  tft.setCursor(6*5,15*8);
 
+  if ( rightNow.hour() < 10 ) tft.print("0");
+  tft.print(rightNow.hour(), DEC);
+  tft.print(':');
+  if ( rightNow.minute() < 10 ) tft.print("0");
+  tft.print(rightNow.minute(), DEC);
+  tft.print(':');
+  if ( rightNow.second() < 10 ) tft.print("0");
+  tft.print(rightNow.second(), DEC);
+ 
+
+  
+}  
+  
 
 // send an NTP request to the time server at the given address 
 unsigned long sendNTPpacket(IPAddress& address)
