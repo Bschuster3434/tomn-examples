@@ -37,6 +37,7 @@ unsigned long secsSince1900;
 unsigned long secsLastSet;
 unsigned long secsDelay = 600;
 int counter;
+unsigned long offset = -14400;
 
 void setup() {
   Serial.begin(9600);
@@ -122,14 +123,14 @@ void loop() {
   }
   
   DateTime now = RTC.now();
-  displayTime( now );
+  displayTime( now + offset );
+  displayTimeSmall( now );
   secsSince1900 = now.secondstime() + 946684800;  
 
   delay(100);
   
 }
   
- 
 void displayTime(DateTime rightNow) {
   
   tft.setTextSize(1);
@@ -146,7 +147,7 @@ void displayTime(DateTime rightNow) {
   tft.print(rightNow.day(), DEC);
   tft.print(' ');
 
-  tft.setCursor(6*5,15*8);
+  tft.setCursor(6*5,12*8);
 
   if ( rightNow.hour() < 10 ) tft.print("0");
   tft.print(rightNow.hour(), DEC);
@@ -157,10 +158,37 @@ void displayTime(DateTime rightNow) {
   if ( rightNow.second() < 10 ) tft.print("0");
   tft.print(rightNow.second(), DEC);
  
+}
 
+void displayTimeSmall(DateTime rightNow) {
   
-}  
+  tft.setTextSize(1);
+
+  tft.setCursor(3*6*2,22*8);
+  tft.setTextSize(2);
   
+  tft.print(rightNow.year(), DEC);
+  tft.print('/');
+  if ( rightNow.month() < 10 ) tft.print("0");
+  tft.print(rightNow.month(), DEC);
+  tft.print('/');
+  if ( rightNow.day() < 10 ) tft.print("0");
+  tft.print(rightNow.day(), DEC);
+  tft.print(' ');
+
+  if ( rightNow.hour() < 10 ) tft.print("0");
+  tft.print(rightNow.hour(), DEC);
+  tft.print(':');
+  if ( rightNow.minute() < 10 ) tft.print("0");
+  tft.print(rightNow.minute(), DEC);
+  tft.print(':');
+  if ( rightNow.second() < 10 ) tft.print("0");
+  tft.print(rightNow.second(), DEC);
+ 
+}
+  
+
+
 
 // send an NTP request to the time server at the given address 
 unsigned long sendNTPpacket(IPAddress& address)
