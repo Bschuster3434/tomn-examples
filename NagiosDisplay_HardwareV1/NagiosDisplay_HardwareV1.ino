@@ -269,14 +269,6 @@ void requestUpdate() {
   
   strip.setBrightness( ledBrightness );
   strip.show();
-  
-  drawIndicator( 1, 2, "Zero", 0 );
-  drawIndicator( 1, 3, "One", 1 );
-  drawIndicator( 1, 4, "Two", 2 );
-  drawIndicator( 1, 5, "Three", 3 );
-  drawIndicator( 1, 6, "Four", 4 );
-  drawIndicator( 1, 7, "Five", 5 );
-
     
 }
 
