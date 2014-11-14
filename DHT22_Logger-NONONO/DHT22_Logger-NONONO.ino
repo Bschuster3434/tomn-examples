@@ -64,8 +64,8 @@ char server[] = "data.sparkfun.com";    // name address for data.sparkFun (using
 /////////////////
 const String publicKey = "v0QKZ6aLgRibO4qA1LXp";
 const String privateKey = "aP0XeZwz2bfGxVYmZe5k";
-const byte NUM_FIELDS = 3;
-const String fieldNames[NUM_FIELDS] = {"temp", "humidity", "eventtype"};
+const byte NUM_FIELDS = 2;
+const String fieldNames[NUM_FIELDS] = {"temp", "humidity"};
 String fieldData[NUM_FIELDS];
 
 
@@ -96,7 +96,7 @@ void setup()
 
   Serial.println("Starting up and aquiring IP Address");
   lcd0.setCursor(0,0);
-  lcd0.print(F("Aquiring IP      "));
+  lcd0.print("Aquiring IP      ");
 
 
   // start Ethernet and UDP
@@ -106,17 +106,21 @@ void setup()
     for(;;)
       ;
   }
+
+  lcd0.clearDisplay();
+  lcd0.setCursor(0,0);
+  lcd0.println("Start Plotly");
+  lcd0.display();
+  
  
   lcd0.clearDisplay();
   lcd0.setCursor(0,0);
-  lcd0.println(F("Starting UDP  client"));
+  lcd0.println("Starting UDP  client");
   lcd0.println();
   lcd0.print(Ethernet.localIP());
   lcd0.display();
   delay(5000);
   lcd0.clearDisplay();
-
-  fieldData[2] = String(F("OfficeStats"));
 
   Udp.begin(localPort);
 }
@@ -223,8 +227,9 @@ void loop()
     lcd0.display();
     
     lcd0.setCursor(0*6,1*8);
-    lcd0.setTextSize(4);
-    myDHT22.readData();
+    lcd0.setTextSize(1);
+//    myDHT22.readData();
+    readDHT22();
     lcd0.print(((int)(myDHT22.getTemperatureF()*100))/100);
     lcd0.print("F");
     lcd0.display();
@@ -235,15 +240,16 @@ void loop()
     lcd0.println("              ");
     lcd0.display();
   }
-  if ( !(secsSince1900 % 10 ) ) {
+  if ( !(secsSince1900 % 300 ) ) {
    
-    myDHT22.readData();
+//    myDHT22.readData();
+      readDHT22();
 
     lcd0.setCursor(0,0);
     lcd0.println("Sending data  ");
     lcd0.display();
     
-    fieldData[0] = String((int)(myDHT22.getTemperatureF()*10));
+    fieldData[0] = String((int)myDHT22.getTemperatureF());
     fieldData[1] = String((int)myDHT22.getHumidity());
     
     postData();
@@ -259,12 +265,72 @@ void loop()
   lcd0.display();
 }
 
+void readDHT22() {
+  DHT22_ERROR_t errorCode;
+  
+  // The sensor can only be read from every 1-2s, and requires a minimum
+  // 2s warm-up after power-on.
+
+  lcd0.setCursor(0,0);  
+  lcd0.print("Requesting...");
+  lcd0.display();
+
+  delay(2000);
+
+  errorCode = myDHT22.readData();
+  lcd0.print("                  ");
+  lcd0.setCursor(0,0);  
+
+  switch(errorCode)
+  {
+    case DHT_ERROR_NONE:
+      lcd0.print("VALID         ");
+      lcd0.display();
+      delay(1000);
+      break;
+    case DHT_ERROR_CHECKSUM:
+      lcd0.print("check sum error ");
+      lcd0.display();
+      delay(1000);
+      break;
+    case DHT_BUS_HUNG:
+      lcd0.println("BUS Hung ");
+      lcd0.display();
+      delay(1000);
+      break;
+    case DHT_ERROR_NOT_PRESENT:
+      lcd0.println("Not Present ");
+      lcd0.display();
+      delay(1000);
+      break;
+    case DHT_ERROR_ACK_TOO_LONG:
+      lcd0.println("ACK time out ");
+      lcd0.display();
+      delay(1000);
+      break;
+    case DHT_ERROR_SYNC_TIMEOUT:
+      lcd0.println("Sync Timeout ");
+      lcd0.display();
+      delay(1000);
+      break;
+    case DHT_ERROR_DATA_TIMEOUT:
+      lcd0.println("Data Timeout ");
+      lcd0.display();
+      delay(1000);
+      break;
+    case DHT_ERROR_TOOQUICK:
+      lcd0.println("Polled to quick ");
+      lcd0.display();
+      delay(1000);
+      break;
+  }
+  lcd0.setCursor(0,0);
+  lcd0.print("            ");
+}
 
 // Send data up to sparkfun
 void postData()
 {
-  Serial.println(F("Posting data to data.sparkfun.com"));
-
   // Make a TCP connection to remote host
   if (client.connect(server, 80))
   {
@@ -283,10 +349,6 @@ void postData()
       client.print(fieldNames[i]);
       client.print("=");
       client.print(fieldData[i]);
-
-      Serial.print(fieldNames[i]);
-      Serial.print("=");
-      Serial.println(fieldData[i]);
     }
     client.println(" HTTP/1.1");
     client.print("Host: ");
